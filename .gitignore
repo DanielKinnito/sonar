@@ -10,6 +10,8 @@
 *.avi
 *.mkv
 *.webm
+*.part
+*.ytdl
 sample_leak.wav
 sample_cloaked.wav
 *.png
