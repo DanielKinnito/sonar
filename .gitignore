@@ -1,0 +1,135 @@
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.aac
+*.ogg
+*.opus
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+sample_leak.wav
+sample_cloaked.wav
+*.png
+*.jpg
+*.jpeg
+*.svg.tmp
+
+# --- Python & DSP Backend ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+backend/.venv/
+backend/venv/
+
+# Local wheel downloads and installation caches
+backend/_wheels/
+*.whl
+
+# Pytest, Coverage, Profiling
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+prof/
+*.prof
+
+# Local DEM Elevation & Geo Cache
+.cache/
+backend/.cache/
+dem_cache/
+*.dem
+
+# --- Node.js & Next.js Workstation ---
+node_modules/
+web/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Next.js Build Output
+.next/
+web/.next/
+out/
+web/out/
+.turbo/
+
+# TypeScript Cache
+*.tsbuildinfo
+
+# --- Environment Variables, Secrets & API Keys ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+secrets/
+
+# --- Operating System Files ---
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+
+# --- IDEs & Text Editors ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# --- Agents & AI Scratchpads ---
+.agents/
