@@ -75,7 +75,7 @@ sonar serve --host 127.0.0.1 --port 8000 --reload
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/health` | Engine health, version, and CPU availability |
+| `GET` | `/api/health` | Engine health, version, and CPU availability |
 | `POST` | `/api/audit` | Upload media, returns whitened STFT & detected Doppler ridges |
 | `POST` | `/api/cloak` | Sanitizes audio/video via 3-layer cloaking pipeline |
 | `GET` | `/api/download/{filename}` | Download sanitized container (enforces path traversal sandbox) |
