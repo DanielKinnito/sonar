@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Maximize2, RefreshCw, Eye, EyeOff, Layers } from "lucide-react";
+import { Layers, Activity, Eye } from "lucide-react";
 import { SpectrogramPayload, DopplerDetection } from "@/lib/api";
 
 interface OverlayOptions {
@@ -52,7 +52,7 @@ export default function SpectrogramCanvas({
     snr: number;
   } | null>(null);
 
-  // Time & Frequency bounds
+  // Frequency & Time bounds
   const minFreq = 40.0;
   const maxFreq = 450.0;
   const maxTime = spectrogram?.times?.length
@@ -70,8 +70,8 @@ export default function SpectrogramCanvas({
     const width = canvas.width;
     const h = canvas.height;
 
-    // Clear background
-    ctx.fillStyle = "#090A0F";
+    // Clear background to obsidian
+    ctx.fillStyle = "#0A0D12";
     ctx.fillRect(0, 0, width, h);
 
     // Coordinate transforms
@@ -91,7 +91,6 @@ export default function SpectrogramCanvas({
           };
         }
       } else if (spectrogram?.s_white) {
-        // Draw directly from s_white matrix
         const nFreqs = spectrogram.freqs.length;
         const nTimes = spectrogram.times.length;
         if (nFreqs > 0 && nTimes > 0) {
@@ -99,20 +98,18 @@ export default function SpectrogramCanvas({
           const data = imgData.data;
 
           for (let f = 0; f < nFreqs; f++) {
-            // Invert Y so lowest frequency is at bottom
             const rowIdx = (nFreqs - 1 - f) * nTimes;
             for (let t = 0; t < nTimes; t++) {
               const val = Math.min(1.0, Math.max(0.0, spectrogram.s_white[f][t] / 10.0));
               const pIdx = (rowIdx + t) * 4;
 
-              // Magma colormap approx
-              data[pIdx] = Math.min(255, Math.floor(val * 1.6 * 255));
-              data[pIdx + 1] = Math.min(255, Math.floor(Math.max(0, val - 0.25) * 1.8 * 255));
-              data[pIdx + 2] = Math.min(255, Math.floor(Math.max(0, val - 0.6) * 2.5 * 255 + (val < 0.2 ? val * 2 * 255 : 0)));
+              // High-contrast radiant acoustic heat-map (amber/cyan)
+              data[pIdx] = Math.min(255, Math.floor(val * 1.5 * 255));
+              data[pIdx + 1] = Math.min(255, Math.floor(Math.max(0, val - 0.2) * 1.8 * 255));
+              data[pIdx + 2] = Math.min(255, Math.floor(Math.max(0, val - 0.5) * 2.4 * 255 + (val < 0.15 ? val * 255 : 0)));
               data[pIdx + 3] = 255;
             }
           }
-          // Create temp offscreen canvas to scale smoothly
           const off = document.createElement("canvas");
           off.width = nTimes;
           off.height = nFreqs;
@@ -125,12 +122,11 @@ export default function SpectrogramCanvas({
       }
     }
 
-    // 2. Draw Frequency & Time Grid Overlay
-    ctx.strokeStyle = "rgba(30, 36, 51, 0.6)";
+    // 2. Frequency & Time Grid Overlay (Precision Hairlines)
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
     ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
+    ctx.setLineDash([3, 4]);
 
-    // Frequency grid lines every 50 Hz
     for (let f = 50; f <= 400; f += 50) {
       const y = freqToY(f);
       ctx.beginPath();
@@ -138,13 +134,12 @@ export default function SpectrogramCanvas({
       ctx.lineTo(width, y);
       ctx.stroke();
 
-      // Label
-      ctx.fillStyle = "rgba(136, 146, 176, 0.45)";
-      ctx.font = "10px monospace";
-      ctx.fillText(`${f} Hz`, 8, y - 4);
+      // Tick label
+      ctx.fillStyle = "rgba(148, 163, 184, 0.4)";
+      ctx.font = "9px ui-monospace, monospace";
+      ctx.fillText(`${f} Hz`, 10, y - 3);
     }
 
-    // Time grid lines every 15s
     for (let t = 15; t < maxTime; t += 15) {
       const x = timeToX(t);
       ctx.beginPath();
@@ -152,19 +147,19 @@ export default function SpectrogramCanvas({
       ctx.lineTo(x, h);
       ctx.stroke();
 
-      ctx.fillStyle = "rgba(136, 146, 176, 0.45)";
-      ctx.font = "10px monospace";
+      ctx.fillStyle = "rgba(148, 163, 184, 0.4)";
+      ctx.font = "9px ui-monospace, monospace";
       ctx.fillText(`${t}s`, x + 4, h - 8);
     }
     ctx.setLineDash([]);
 
-    // 3. Draw Injected Chaff Decoy Curves (Layer 2)
+    // 3. Injected Decoy Chaff (Layer 2)
     if (overlays.showChaff && chaffCurves.length > 0) {
       chaffCurves.forEach((c) => {
         if (!c.times.length) return;
-        ctx.strokeStyle = "rgba(255, 51, 102, 0.85)";
-        ctx.lineWidth = 1.8;
-        ctx.setLineDash([6, 3]);
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.85)";
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([5, 3]);
         ctx.beginPath();
         for (let i = 0; i < c.times.length; i++) {
           const x = timeToX(c.times[i]);
@@ -177,12 +172,12 @@ export default function SpectrogramCanvas({
       });
     }
 
-    // 4. Draw Historical ADS-B Modeled Curves (Pillar 3)
+    // 4. Modeled ADS-B Trajectories (Pillar 3)
     if (overlays.showAdsbCurves && adsbCurves.length > 0) {
       adsbCurves.forEach((c) => {
         if (!c.times.length) return;
-        ctx.strokeStyle = c.is_match ? "rgba(0, 255, 136, 0.95)" : "rgba(0, 240, 255, 0.65)";
-        ctx.lineWidth = 2.4;
+        ctx.strokeStyle = c.is_match ? "#10B981" : "#38BDF8";
+        ctx.lineWidth = 2.0;
         ctx.beginPath();
         for (let i = 0; i < c.times.length; i++) {
           const x = timeToX(c.times[i]);
@@ -192,10 +187,9 @@ export default function SpectrogramCanvas({
         }
         ctx.stroke();
 
-        // Label flight ID
         const midIdx = Math.floor(c.times.length / 2);
-        ctx.fillStyle = c.is_match ? "#00FF88" : "#00F0FF";
-        ctx.font = "bold 10px monospace";
+        ctx.fillStyle = c.is_match ? "#10B981" : "#38BDF8";
+        ctx.font = "bold 9px ui-monospace, monospace";
         ctx.fillText(
           `✈ ${c.flight_id}`,
           timeToX(c.times[midIdx]) + 6,
@@ -204,14 +198,14 @@ export default function SpectrogramCanvas({
       });
     }
 
-    // 5. Draw Raw Viterbi Extracted Ridges
+    // 5. Raw Viterbi Extracted Ridges
     if (overlays.showRawRidges && detections.length > 0) {
       detections.forEach((det) => {
         const r = det.raw_ridge;
         if (!r?.times?.length) return;
 
-        ctx.strokeStyle = "rgba(255, 184, 0, 0.9)";
-        ctx.lineWidth = 2.0;
+        ctx.strokeStyle = "rgba(245, 158, 11, 0.9)";
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
         for (let i = 0; i < r.times.length; i++) {
           const x = timeToX(r.times[i]);
@@ -223,15 +217,14 @@ export default function SpectrogramCanvas({
       });
     }
 
-    // 6. Draw Fitted Physics Curves (f0, 2f0, 3f0)
+    // 6. Fitted Physics Curves (f0)
     if (overlays.showFittedCurves && detections.length > 0) {
-      detections.forEach((det, dIdx) => {
+      detections.forEach((det) => {
         const m = det.model_curve;
         if (!m?.times?.length) return;
 
-        // Fundamental f0
-        ctx.strokeStyle = "#00F0FF";
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = "#38BDF8";
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
         for (let i = 0; i < m.times.length; i++) {
           const x = timeToX(m.times[i]);
@@ -241,73 +234,70 @@ export default function SpectrogramCanvas({
         }
         ctx.stroke();
 
-        // CPA Marker circle
+        // CPA Marker point
         const p = det.fitted_params;
         const cpaX = timeToX(p.t_observed_cpa_s);
         const cpaY = freqToY(p.f0_hz);
 
-        ctx.fillStyle = "#00F0FF";
+        ctx.fillStyle = "#38BDF8";
         ctx.beginPath();
-        ctx.arc(cpaX, cpaY, 4, 0, 2 * Math.PI);
+        ctx.arc(cpaX, cpaY, 3.5, 0, 2 * Math.PI);
         ctx.fill();
 
-        ctx.font = "bold 10px monospace";
-        ctx.fillStyle = "#00F0FF";
-        ctx.fillText(
-          `${det.detection_id}: f0=${p.f0_hz.toFixed(1)}Hz v=${p.velocity_ms.toFixed(0)}m/s`,
-          cpaX + 8,
-          cpaY - 6
-        );
-
-        // Harmonics (2f0, 3f0)
-        if (overlays.showHarmonics) {
-          [2.0, 3.0].forEach((k) => {
-            ctx.strokeStyle = k === 2.0 ? "rgba(0, 240, 255, 0.45)" : "rgba(0, 240, 255, 0.25)";
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([3, 2]);
-            ctx.beginPath();
-            for (let i = 0; i < m.times.length; i++) {
-              const hFreq = m.freqs[i] * k;
-              if (hFreq <= maxFreq) {
-                const x = timeToX(m.times[i]);
-                const y = freqToY(hFreq);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-              }
-            }
-            ctx.stroke();
-            ctx.setLineDash([]);
-          });
-        }
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "bold 9px ui-monospace, monospace";
+        ctx.fillText(`CPA: ${p.f0_hz.toFixed(1)}Hz`, cpaX + 6, cpaY - 6);
       });
     }
 
-    // 7. Cursor Crosshair Telemetry
-    if (cursorPos) {
-      const cx = cursorPos.x;
-      const cy = cursorPos.y;
+    // 7. Harmonic Stacks (2f0, 3f0)
+    if (overlays.showHarmonics && detections.length > 0) {
+      detections.forEach((det) => {
+        const m = det.model_curve;
+        if (!m?.times?.length) return;
 
-      ctx.strokeStyle = "rgba(0, 240, 255, 0.5)";
+        [2, 3].forEach((k) => {
+          ctx.strokeStyle = k === 2 ? "rgba(56, 189, 248, 0.45)" : "rgba(56, 189, 248, 0.3)";
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          for (let i = 0; i < m.times.length; i++) {
+            const fHarm = m.freqs[i] * k;
+            if (fHarm > maxFreq) continue;
+            const x = timeToX(m.times[i]);
+            const y = freqToY(fHarm);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+        });
+      });
+    }
+
+    // 8. Real-time Cursor Reticle & Crosshairs
+    if (cursorPos) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
       ctx.lineWidth = 1;
       ctx.setLineDash([2, 2]);
 
-      // Vertical crosshair
+      // Vertical line
       ctx.beginPath();
-      ctx.moveTo(cx, 0);
-      ctx.lineTo(cx, h);
+      ctx.moveTo(cursorPos.x, 0);
+      ctx.lineTo(cursorPos.x, h);
       ctx.stroke();
 
-      // Horizontal crosshair
+      // Horizontal line
       ctx.beginPath();
-      ctx.moveTo(0, cy);
-      ctx.lineTo(width, cy);
+      ctx.moveTo(0, cursorPos.y);
+      ctx.lineTo(width, cursorPos.y);
       ctx.stroke();
       ctx.setLineDash([]);
     }
   }, [
     overlays,
-    imageDataUri,
     spectrogram,
+    imageDataUri,
     detections,
     chaffCurves,
     adsbCurves,
@@ -315,14 +305,13 @@ export default function SpectrogramCanvas({
     maxTime,
   ]);
 
-  // Handle Canvas Resize
+  // Canvas resize observer
   useEffect(() => {
     const handleResize = () => {
-      const canvas = canvasRef.current;
-      const container = containerRef.current;
-      if (!canvas || !container) return;
-      canvas.width = container.clientWidth;
-      canvas.height = height;
+      if (!containerRef.current || !canvasRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      canvasRef.current.width = rect.width;
+      canvasRef.current.height = height;
       drawCanvas();
     };
 
@@ -335,7 +324,6 @@ export default function SpectrogramCanvas({
     drawCanvas();
   }, [drawCanvas]);
 
-  // Mouse Move Telemetry
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -343,10 +331,9 @@ export default function SpectrogramCanvas({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const time = (x / canvas.width) * (maxTime - minTime) + minTime;
+    const time = minTime + (x / canvas.width) * (maxTime - minTime);
     const freq = maxFreq - (y / canvas.height) * (maxFreq - minFreq);
 
-    // Look up SNR from spectrogram matrix if available
     let snr = 0.0;
     if (spectrogram?.s_white) {
       const fIdx = Math.min(
@@ -378,42 +365,73 @@ export default function SpectrogramCanvas({
   return (
     <div
       ref={containerRef}
-      className="flex flex-col bg-sonar-panel border border-sonar-border rounded-lg overflow-hidden shadow-2xl"
+      className="flex flex-col bg-[#0E1219] border border-white/[0.08] rounded-lg overflow-hidden shadow-sm"
     >
-      {/* Canvas Header & Controls */}
-      <div className="flex flex-wrap items-center justify-between px-4 py-2 bg-sonar-card/80 border-b border-sonar-border text-xs">
+      {/* Top HUD Instrument Strip */}
+      <div className="flex flex-wrap items-center justify-between px-3.5 py-2 bg-[#141923] border-b border-white/[0.07] text-xs gap-2">
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-sonar-cyan" />
-          <span className="font-semibold text-sonar-text tracking-wide uppercase">
+          <Layers className="w-3.5 h-3.5 text-sonar-cyan" />
+          <span className="font-mono font-medium text-white text-[11px] tracking-wide">
             {title}
+          </span>
+          <span className="text-[10px] font-mono text-sonar-muted px-1.5 py-0.2 bg-white/[0.04] rounded border border-white/[0.08]">
+            40–450 Hz
           </span>
         </div>
 
-        {/* Overlay Toggles */}
-        <div className="flex items-center gap-2 text-[11px] font-mono">
+        {/* Live HUD Telemetry Readout */}
+        <div className="flex items-center gap-3 text-[11px] font-mono bg-[#0B0E14] px-2.5 py-1 rounded border border-white/[0.06]">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sonar-muted text-[10px]">TIME:</span>
+            <span className="text-white font-medium">
+              {cursorPos
+                ? `${Math.floor(cursorPos.time / 60)}:${(cursorPos.time % 60)
+                    .toFixed(2)
+                    .padStart(5, "0")}s`
+                : "--:--.--s"}
+            </span>
+          </div>
+          <span className="text-white/[0.15]">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sonar-muted text-[10px]">FREQ:</span>
+            <span className="text-sonar-amber font-medium">
+              {cursorPos ? `${cursorPos.freq.toFixed(1)} Hz` : "---.- Hz"}
+            </span>
+          </div>
+          <span className="text-white/[0.15]">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sonar-muted text-[10px]">SNR:</span>
+            <span className="text-sonar-cyan font-medium">
+              {cursorPos ? `+${cursorPos.snr.toFixed(1)} σ` : "-.- σ"}
+            </span>
+          </div>
+        </div>
+
+        {/* Overlay Filters */}
+        <div className="flex items-center gap-1.5 text-[10px] font-mono">
           <button
             onClick={() =>
               setOverlays((o) => ({ ...o, showSpectrogram: !o.showSpectrogram }))
             }
-            className={`px-2 py-0.5 rounded border transition-colors ${
+            className={`px-2 py-0.5 rounded transition-colors border ${
               overlays.showSpectrogram
-                ? "bg-sonar-cyan/15 border-sonar-cyan text-sonar-cyan"
-                : "bg-sonar-bg border-sonar-border text-sonar-muted"
+                ? "bg-white/[0.08] border-white/[0.2] text-white"
+                : "bg-transparent border-white/[0.06] text-sonar-muted"
             }`}
           >
-            STFT Map
+            STFT
           </button>
           <button
             onClick={() =>
               setOverlays((o) => ({ ...o, showRawRidges: !o.showRawRidges }))
             }
-            className={`px-2 py-0.5 rounded border transition-colors ${
+            className={`px-2 py-0.5 rounded transition-colors border ${
               overlays.showRawRidges
-                ? "bg-sonar-amber/15 border-sonar-amber text-sonar-amber"
-                : "bg-sonar-bg border-sonar-border text-sonar-muted"
+                ? "bg-sonar-amber/10 border-sonar-amber/30 text-sonar-amber"
+                : "bg-transparent border-white/[0.06] text-sonar-muted"
             }`}
           >
-            Viterbi Ridges
+            Viterbi
           </button>
           <button
             onClick={() =>
@@ -422,10 +440,10 @@ export default function SpectrogramCanvas({
                 showFittedCurves: !o.showFittedCurves,
               }))
             }
-            className={`px-2 py-0.5 rounded border transition-colors ${
+            className={`px-2 py-0.5 rounded transition-colors border ${
               overlays.showFittedCurves
-                ? "bg-sonar-cyan/15 border-sonar-cyan text-sonar-cyan"
-                : "bg-sonar-bg border-sonar-border text-sonar-muted"
+                ? "bg-sonar-cyan/10 border-sonar-cyan/30 text-sonar-cyan"
+                : "bg-transparent border-white/[0.06] text-sonar-muted"
             }`}
           >
             Fitted f0
@@ -434,26 +452,26 @@ export default function SpectrogramCanvas({
             onClick={() =>
               setOverlays((o) => ({ ...o, showHarmonics: !o.showHarmonics }))
             }
-            className={`px-2 py-0.5 rounded border transition-colors ${
+            className={`px-2 py-0.5 rounded transition-colors border ${
               overlays.showHarmonics
-                ? "bg-sonar-cyan/15 border-sonar-cyan text-sonar-cyan"
-                : "bg-sonar-bg border-sonar-border text-sonar-muted"
+                ? "bg-sonar-cyan/10 border-sonar-cyan/30 text-sonar-cyan"
+                : "bg-transparent border-white/[0.06] text-sonar-muted"
             }`}
           >
-            Harmonics (2f0, 3f0)
+            2f0, 3f0
           </button>
           {chaffCurves.length > 0 && (
             <button
               onClick={() =>
                 setOverlays((o) => ({ ...o, showChaff: !o.showChaff }))
               }
-              className={`px-2 py-0.5 rounded border transition-colors ${
+              className={`px-2 py-0.5 rounded transition-colors border ${
                 overlays.showChaff
-                  ? "bg-sonar-red/15 border-sonar-red text-sonar-red"
-                  : "bg-sonar-bg border-sonar-border text-sonar-muted"
+                  ? "bg-sonar-red/10 border-sonar-red/30 text-sonar-red"
+                  : "bg-transparent border-white/[0.06] text-sonar-muted"
               }`}
             >
-              Chaff Decoys
+              Chaff
             </button>
           )}
           {adsbCurves.length > 0 && (
@@ -464,52 +482,26 @@ export default function SpectrogramCanvas({
                   showAdsbCurves: !o.showAdsbCurves,
                 }))
               }
-              className={`px-2 py-0.5 rounded border transition-colors ${
+              className={`px-2 py-0.5 rounded transition-colors border ${
                 overlays.showAdsbCurves
-                  ? "bg-sonar-green/15 border-sonar-green text-sonar-green"
-                  : "bg-sonar-bg border-sonar-border text-sonar-muted"
+                  ? "bg-sonar-green/10 border-sonar-green/30 text-sonar-green"
+                  : "bg-transparent border-white/[0.06] text-sonar-muted"
               }`}
             >
-              ADS-B Trajectories
+              ADS-B
             </button>
           )}
         </div>
       </div>
 
-      {/* Main Canvas Viewport */}
-      <div className="relative w-full overflow-hidden bg-sonar-bg">
+      {/* Main Canvas */}
+      <div className="relative w-full overflow-hidden bg-[#0A0D12]">
         <canvas
           ref={canvasRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           className="w-full cursor-crosshair block"
         />
-
-        {/* Real-time Cursor Telemetry Readout */}
-        <div className="absolute bottom-2 right-3 px-3 py-1 bg-sonar-bg/90 border border-sonar-border rounded font-mono text-[11px] text-sonar-text shadow-lg backdrop-blur-sm pointer-events-none flex items-center gap-4">
-          <div>
-            <span className="text-sonar-muted">TIME: </span>
-            <span className="text-sonar-cyan">
-              {cursorPos
-                ? `${Math.floor(cursorPos.time / 60)}:${(cursorPos.time % 60)
-                    .toFixed(2)
-                    .padStart(5, "0")}s`
-                : "--:--.--s"}
-            </span>
-          </div>
-          <div>
-            <span className="text-sonar-muted">FREQ: </span>
-            <span className="text-sonar-amber">
-              {cursorPos ? `${cursorPos.freq.toFixed(2)} Hz` : "---.-- Hz"}
-            </span>
-          </div>
-          <div>
-            <span className="text-sonar-muted">SNR: </span>
-            <span className="text-sonar-green">
-              {cursorPos ? `${cursorPos.snr.toFixed(1)} σ` : "-.- σ"}
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );
